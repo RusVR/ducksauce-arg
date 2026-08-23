@@ -20,15 +20,16 @@
             height: 0;
         }
 
-        .duck {
+        #duck {
             position: absolute;
             width: 120px;
             height: auto;
             left: 0;
             top: 0;
             transform: translate(-50%, -50%);
-            will-change: transform;
+            cursor: pointer;
             z-index: 2;
+            user-select: none;
         }
 
         .trail {
@@ -41,6 +42,18 @@
             pointer-events: none;
             z-index: 1;
             animation: fadeTrail 1.2s linear forwards;
+        }
+
+        #message {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Arial, sans-serif;
+            font-size: 40px;
+            color: black;
+            display: none;
+            z-index: 10;
         }
 
         @keyframes fadeTrail {
@@ -58,12 +71,15 @@
 <body>
 
     <div id="container">
-        <img id="duck" class="duck" src="Ducksauce.png">
+        <img id="duck" src="Ducksauce.png">
     </div>
+
+    <div id="message">Homer Simpson</div>
 
     <script>
         const duck = document.getElementById("duck");
         const container = document.getElementById("container");
+        const message = document.getElementById("message");
 
         const radiusX = 100;
         const radiusY = 55;
@@ -72,17 +88,37 @@
         let t = 0;
         let lastTrail = 0;
 
-        function animate(time) {
+        if (localStorage.getItem("ducksauce13") === "true") {
+            localStorage.removeItem("ducksauce13");
 
+            message.style.display = "block";
+
+            setTimeout(() => {
+                message.style.display = "none";
+            }, 900);
+        }
+
+        duck.addEventListener("click", () => {
+            let clicks = Number(localStorage.getItem("ducksauceClicks")) || 0;
+
+            clicks++;
+
+            if (clicks >= 13) {
+                localStorage.setItem("ducksauce13", "true");
+                localStorage.removeItem("ducksauceClicks");
+            } else {
+                localStorage.setItem("ducksauceClicks", clicks);
+            }
+        });
+
+        function animate(time) {
             const x = Math.sin(t) * radiusX;
             const y = Math.sin(t * 2) * radiusY;
 
             duck.style.transform =
                 `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
 
-            // Create a new trail copy
             if (time - lastTrail > 45) {
-
                 const trail = document.createElement("img");
 
                 trail.src = "Ducksauce.png";
@@ -93,7 +129,6 @@
 
                 container.appendChild(trail);
 
-                // Remove after fading
                 setTimeout(() => {
                     trail.remove();
                 }, 1200);
