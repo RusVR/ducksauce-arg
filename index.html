@@ -107,12 +107,14 @@
             }
         });
 
-        function distance(a, b) {
+        function distanceBetween(a, b) {
             return Math.hypot(a.x - b.x, a.y - b.y);
         }
 
         function simplify(points, tolerance) {
-            if (points.length < 3) return points;
+            if (points.length < 3) {
+                return points;
+            }
 
             let maxDistance = 0;
             let index = 0;
@@ -160,12 +162,10 @@
             return [start, end];
         }
 
-        function distanceBetween(a, b) {
-            return Math.hypot(a.x - b.x, a.y - b.y);
-        }
-
         function isTriangle(points) {
-            if (points.length < 3) return false;
+            if (points.length < 3) {
+                return false;
+            }
 
             const first = points[0];
             const last = points[points.length - 1];
@@ -200,6 +200,7 @@
 
         canvas.addEventListener("pointerdown", event => {
             drawing = true;
+
             points = [
                 {
                     x: event.clientX,
@@ -212,7 +213,9 @@
         });
 
         canvas.addEventListener("pointermove", event => {
-            if (!drawing) return;
+            if (!drawing) {
+                return;
+            }
 
             points.push({
                 x: event.clientX,
@@ -228,15 +231,14 @@
         });
 
         canvas.addEventListener("pointerup", () => {
-            if (!drawing) return;
+            if (!drawing) {
+                return;
+            }
 
             drawing = false;
 
             if (isTriangle(points)) {
-                window.open(
-                    "https://youtube.com/shorts/nlTzAG0wniA",
-                    "_blank"
-                );
+                window.location.href = "https://youtube.com/shorts/nlTzAG0wniA";
             }
         });
 
