@@ -44,16 +44,14 @@
             animation: fadeTrail 1.2s linear forwards;
         }
 
-        #message {
+        #drawingCanvas {
             position: fixed;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            font-family: Arial, sans-serif;
-            font-size: 40px;
-            color: black;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
             display: none;
-            z-index: 10;
+            z-index: 20;
+            cursor: crosshair;
         }
 
         @keyframes fadeTrail {
@@ -74,12 +72,13 @@
         <img id="duck" src="Ducksauce.png">
     </div>
 
-    <div id="message">Homer Simpson</div>
+    <canvas id="drawingCanvas"></canvas>
 
     <script>
         const duck = document.getElementById("duck");
         const container = document.getElementById("container");
-        const message = document.getElementById("message");
+        const canvas = document.getElementById("drawingCanvas");
+        const ctx = canvas.getContext("2d");
 
         const radiusX = 100;
         const radiusY = 55;
@@ -87,27 +86,163 @@
 
         let t = 0;
         let lastTrail = 0;
+        let clicks = 0;
+        let drawing = false;
+        let points = [];
 
-        if (localStorage.getItem("ducksauce13") === "true") {
-            localStorage.removeItem("ducksauce13");
-
-            message.style.display = "block";
-
-            setTimeout(() => {
-                message.style.display = "none";
-            }, 900);
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
 
-        duck.addEventListener("click", () => {
-            let clicks = Number(localStorage.getItem("ducksauceClicks")) || 0;
+        resizeCanvas();
+        window.addEventListener("resize", resizeCanvas);
 
+        duck.addEventListener("click", () => {
             clicks++;
 
             if (clicks >= 13) {
-                localStorage.setItem("ducksauce13", "true");
-                localStorage.removeItem("ducksauceClicks");
-            } else {
-                localStorage.setItem("ducksauceClicks", clicks);
+                duck.style.display = "none";
+                canvas.style.display = "block";
+            }
+        });
+
+        function distance(a, b) {
+            return Math.hypot(a.x - b.x, a.y - b.y);
+        }
+
+        function simplify(points, tolerance) {
+            if (points.length < 3) return points;
+
+            let maxDistance = 0;
+            let index = 0;
+
+            const start = points[0];
+            const end = points[points.length - 1];
+
+            for (let i = 1; i < points.length - 1; i++) {
+                const dx = end.x - start.x;
+                const dy = end.y - start.y;
+
+                let distance;
+
+                if (dx === 0 && dy === 0) {
+                    distance = distanceBetween(points[i], start);
+                } else {
+                    const t =
+                        ((points[i].x - start.x) * dx +
+                        (points[i].y - start.y) * dy) /
+                        (dx * dx + dy * dy);
+
+                    const clamped = Math.max(0, Math.min(1, t));
+
+                    const projection = {
+                        x: start.x + clamped * dx,
+                        y: start.y + clamped * dy
+                    };
+
+                    distance = distanceBetween(points[i], projection);
+                }
+
+                if (distance > maxDistance) {
+                    index = i;
+                    maxDistance = distance;
+                }
+            }
+
+            if (maxDistance > tolerance) {
+                const left = simplify(points.slice(0, index + 1), tolerance);
+                const right = simplify(points.slice(index), tolerance);
+
+                return left.slice(0, -1).concat(right);
+            }
+
+            return [start, end];
+        }
+
+        function distanceBetween(a, b) {
+            return Math.hypot(a.x - b.x, a.y - b.y);
+        }
+
+        function isTriangle(points) {
+            if (points.length < 3) return false;
+
+            const first = points[0];
+            const last = points[points.length - 1];
+
+            if (distanceBetween(first, last) > 100) {
+                return false;
+            }
+
+            const simplified = simplify(points, 25);
+
+            if (simplified.length !== 4) {
+                return false;
+            }
+
+            const a = simplified[0];
+            const b = simplified[1];
+            const c = simplified[2];
+
+            const ab = distanceBetween(a, b);
+            const bc = distanceBetween(b, c);
+            const ca = distanceBetween(c, a);
+
+            if (ab < 50 || bc < 50 || ca < 50) {
+                return false;
+            }
+
+            const largest = Math.max(ab, bc, ca);
+            const smallest = Math.min(ab, bc, ca);
+
+            return largest / smallest < 4;
+        }
+
+        canvas.addEventListener("pointerdown", event => {
+            drawing = true;
+            points = [
+                {
+                    x: event.clientX,
+                    y: event.clientY
+                }
+            ];
+
+            ctx.beginPath();
+            ctx.moveTo(event.clientX, event.clientY);
+        });
+
+        canvas.addEventListener("pointermove", event => {
+            if (!drawing) return;
+
+            points.push({
+                x: event.clientX,
+                y: event.clientY
+            });
+
+            ctx.lineTo(event.clientX, event.clientY);
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 4;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.stroke();
+        });
+
+        canvas.addEventListener("pointerup", () => {
+            if (!drawing) return;
+
+            drawing = false;
+
+            if (isTriangle(points)) {
+                window.open(
+                    "https://youtube.com/shorts/nlTzAG0wniA",
+                    "_blank"
+                );
+            }
+        });
+
+        canvas.addEventListener("pointerleave", () => {
+            if (drawing) {
+                drawing = false;
             }
         });
 
@@ -118,7 +253,7 @@
             duck.style.transform =
                 `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
 
-            if (time - lastTrail > 45) {
+            if (time - lastTrail > 45 && canvas.style.display !== "block") {
                 const trail = document.createElement("img");
 
                 trail.src = "Ducksauce.png";
